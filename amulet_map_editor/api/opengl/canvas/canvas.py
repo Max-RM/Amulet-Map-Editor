@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Optional, Callable
 import logging
 
 import wx
@@ -16,6 +16,7 @@ from OpenGL.GL import (
     glGetString,
     GL_VERSION,
 )
+from OpenGL.GL.ARB.explicit_attrib_location import glInitExplicitAttribLocationARB
 
 log = logging.getLogger(__name__)
 
@@ -51,30 +52,31 @@ class BaseCanvas(GLCanvas):
         # Amulet-Team/Amulet-Map-Editor#84
         # Amulet-Team/Amulet-Map-Editor#597
         # Amulet-Team/Amulet-Map-Editor#856
-        context_constructors = [
-            lambda: GLContext(
-                self,
-                ctxAttrs=GLContextAttrs()
-                .PlatformDefaults()
-                .OGLVersion(3, 3)
-                .CoreProfile()
-                .EndList(),
-            ),
-            lambda: GLContext(
-                self,
-                ctxAttrs=GLContextAttrs()
-                .PlatformDefaults()
-                .OGLVersion(2, 1)
-                .CompatibilityProfile()
-                .EndList(),
-            ),
-        ]
+        def gl3() -> Optional[GLContext]:
+            ctx_attrs = GLContextAttrs()
+            ctx_attrs.PlatformDefaults()
+            ctx_attrs.OGLVersion(3, 3)
+            ctx_attrs.CoreProfile()
+            ctx_attrs.EndList()
+            ctx = GLContext(self, ctxAttrs=ctx_attrs)
+            if ctx.IsOK():
+                return ctx
+            return None
 
-        for constructor in context_constructors:
-            context = constructor()
-            if context.IsOK():
-                break
-        else:
+        def gl2() -> Optional[GLContext]:
+            ctx_attrs = GLContextAttrs()
+            ctx_attrs.PlatformDefaults()
+            ctx_attrs.OGLVersion(2, 1)
+            ctx_attrs.CompatibilityProfile()
+            ctx_attrs.EndList()
+            ctx = GLContext(self, ctxAttrs=ctx_attrs)
+            if ctx.IsOK() and glInitExplicitAttribLocationARB():
+                return ctx
+            return None
+
+        context_constructors: list[Callable[[], Optional[GLContext]]] = [gl3, gl2]
+        context = next((constructor() for constructor in context_constructors), None)
+        if context is None:
             raise Exception(f"Failed setting up context")
 
         self._context = context
