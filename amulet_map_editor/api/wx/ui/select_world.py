@@ -40,11 +40,18 @@ if platform == "win32":
         "com.mojang",
         "minecraftWorlds",
     )
-    minecraft_world_paths[lang.get("world.bedrock_education_platform")] = os.path.join(
+    minecraft_world_paths[lang.get("world.bedrock_education_store")] = os.path.join(
         os.getenv("LOCALAPPDATA"),
         "Packages",
         "Microsoft.MinecraftEducationEdition_8wekyb3d8bbwe",
         "LocalState",
+        "games",
+        "com.mojang",
+        "minecraftWorlds",
+    )
+    minecraft_world_paths[lang.get("world.bedrock_education_desktop")] = os.path.join(
+        os.getenv("APPDATA"),
+        "Minecraft Education Edition",
         "games",
         "com.mojang",
         "minecraftWorlds",
