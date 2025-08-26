@@ -10,6 +10,8 @@ from amulet_map_editor.programs.edit.api.events import (
     ToolChangeEvent,
     EVT_TOOL_CHANGE,
 )
+from amulet_map_editor import lang
+from amulet_map_editor.programs.edit.edit import EDIT_CONFIG_ID
 
 from amulet_map_editor.programs.edit.plugins.tools import (
     ImportTool,
@@ -73,9 +75,8 @@ class ToolManagerSizer(wx.BoxSizer, EditCanvasContainer):
         self._tools[tool.name] = tool
         self._tool_option_sizer.Add(tool, 1, wx.EXPAND, 0)
 
-    def _enable_tool_event(self, evt):
-        self._enable_tool(evt.tool)
-        # evt.Skip() # this causes issues if uncommented
+    def _enable_tool_event(self, evt: ToolChangeEvent):
+        self._enable_tool(evt.tool, evt.state)
 
     def enable(self):
         if isinstance(self._active_tool, SelectTool):
@@ -97,7 +98,7 @@ class ToolManagerSizer(wx.BoxSizer, EditCanvasContainer):
         if not isinstance(self._active_tool, SelectTool):
             self._enable_tool("Select")
 
-    def _enable_tool(self, tool: str):
+    def _enable_tool(self, tool: str, state=None):
         if tool in self._tools:
             if self._active_tool is not None:
                 self._active_tool.disable()
@@ -111,6 +112,7 @@ class ToolManagerSizer(wx.BoxSizer, EditCanvasContainer):
             elif isinstance(self._active_tool, wx.Sizer):
                 self._active_tool.ShowItems(show=True)
             self._active_tool.enable()
+            self._active_tool.set_state(state)
             self.canvas.reset_bound_events()
             self.canvas.Layout()
 
@@ -123,6 +125,11 @@ class ToolSelect(wx.Panel, EditCanvasContainer):
         self._sizer = wx.BoxSizer(wx.HORIZONTAL)
         self.SetSizer(self._sizer)
 
+        # Touch controls toggles
+        self._touch_controls_checkbox = None
+        self._mouse_mode_checkbox = None
+        self._build_touch_toggles()
+
     def register_tool(self, name: str):
         button = wx.Button(self, label=name)
         self._sizer.Add(button)
@@ -133,3 +140,29 @@ class ToolSelect(wx.Panel, EditCanvasContainer):
             wx.EVT_BUTTON,
             lambda evt: wx.PostEvent(self.canvas, ToolChangeEvent(tool=name)),
         )
+
+    def _build_touch_toggles(self):
+        """Touch control toggles are now in the top toolbar (FilePanel)."""
+        # Touch controls toggles moved to top toolbar
+        self._touch_controls_checkbox = None
+        self._mouse_mode_checkbox = None
+
+    def _on_touch_controls_toggle(self, evt):
+        """Touch control toggles are now in the top toolbar (FilePanel)."""
+        evt.Skip()
+
+    def _on_mouse_mode_toggle(self, evt):
+        """Touch control toggles are now in the top toolbar (FilePanel)."""
+        evt.Skip()
+
+    def _update_toggle_states(self):
+        """Touch control toggles are now in the top toolbar (FilePanel)."""
+        pass
+
+    def _update_toggle_visibility(self):
+        """Touch control toggles are now in the top toolbar (FilePanel)."""
+        pass
+
+    def update_touch_toggles(self):
+        """Touch control toggles are now in the top toolbar (FilePanel)."""
+        pass

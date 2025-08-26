@@ -152,7 +152,8 @@ class ButtonInput(WindowContainer):
 
     def unpress_all(self):
         """Unpress all keys.
-        This is useful if the window focus is lost because key release events will not be detected."""
+        This is useful if the window focus is lost because key release events will not be detected.
+        """
         self._pressed_keys.clear()
         self._clean_up_actions()
 
@@ -243,3 +244,16 @@ class ButtonInput(WindowContainer):
 
     def _process_continuous_inputs(self, evt):
         wx.PostEvent(self.window, InputHeldEvent(self._continuous_actions.copy()))
+
+    # Programmatic control for virtual/touch inputs
+    def press_action(self, action_id: ActionIDType):
+        """Programmatically start an action as if its key was pressed."""
+        if action_id in self._registered_actions and action_id not in self._continuous_actions:
+            self._continuous_actions.add(action_id)
+            wx.PostEvent(self.window, InputPressEvent(action_id))
+
+    def release_action(self, action_id: ActionIDType):
+        """Programmatically stop an action as if its key was released."""
+        if action_id in self._continuous_actions:
+            self._continuous_actions.remove(action_id)
+            wx.PostEvent(self.window, InputReleaseEvent(action_id))

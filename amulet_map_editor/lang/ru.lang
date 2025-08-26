@@ -220,3 +220,8 @@ program_3d_edit.file_ui.undo_tooltip=Отменить
 program_3d_edit.file_ui.redo_tooltip=Вернуть
 program_3d_edit.file_ui.save_tooltip=Сохранить изменения
 program_3d_edit.file_ui.close_tooltip=Закрыть мир
+# Сенсорное управление
+program_3d_edit.touch_controls.toggle_label=Сенсорное управление
+program_3d_edit.touch_controls.toggle_tooltip=Показать/скрыть наэкранные кнопки для передвижения
+program_3d_edit.mouse_mode.toggle_label=Выделитель / Камера
+program_3d_edit.mouse_mode.toggle_tooltip=Переключатель между режимом выделения области и вращения взгляда камеры

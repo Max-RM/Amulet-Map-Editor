@@ -217,22 +217,8 @@ program_3d_edit.goto_ui.paste_button_tooltip=Paste a previously copied coordinat
 program_3d_edit.file_ui.version_tooltip=Platform and data version of the world
 program_3d_edit.file_ui.projection_tooltip=Change view
 program_3d_edit.file_ui.location_tooltip=Move camera
-program_3d_edit.file_ui.speed_blocks_per_second=b/s
-program_3d_edit.file_ui.speed_tooltip=Camera speed in blocks per second
-program_3d_edit.file_ui.speed_dialog_name=Set camera speed
 program_3d_edit.file_ui.dim_tooltip=Select dimension
 program_3d_edit.file_ui.undo_tooltip=Undo
 program_3d_edit.file_ui.redo_tooltip=Redo
 program_3d_edit.file_ui.save_tooltip=Save changes
 program_3d_edit.file_ui.close_tooltip=Close world
-
-# Touch Controls
-program_3d_edit.touch_controls.toggle_label=Touch Controls
-program_3d_edit.touch_controls.toggle_tooltip=Show/hide on-screen movement buttons
-program_3d_edit.mouse_mode.toggle_label=Selector / Camera
-program_3d_edit.mouse_mode.toggle_tooltip=Toggle between selection mode and camera rotation mode
-
-# Options
-program_3d_edit.options.field_of_view=Field of View
-program_3d_edit.options.render_distance=Render Distance
-program_3d_edit.options.camera_sensitivity=Camera Sensitivity

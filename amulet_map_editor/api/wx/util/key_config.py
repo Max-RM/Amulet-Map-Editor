@@ -235,7 +235,6 @@ _mouse_events = {
 def serialise_modifier(
     evt: Union[wx.KeyEvent, wx.MouseEvent], key: int
 ) -> ModifierType:
-
     modifier = []
     if evt.ControlDown():
         if key not in (wx.WXK_SHIFT, wx.WXK_ALT):
@@ -272,10 +271,9 @@ def serialise_key(evt: Union[wx.KeyEvent, wx.MouseEvent]) -> Optional[KeyType]:
 
 
 def serialise_key_event(
-    evt: Union[wx.KeyEvent, wx.MouseEvent]
+    evt: Union[wx.KeyEvent, wx.MouseEvent],
 ) -> Optional[SerialisedKeyType]:
     if isinstance(evt, wx.KeyEvent):
-
         key = evt.GetUnicodeKey() or evt.GetKeyCode()
         if key == wx.WXK_CONTROL:
             return
@@ -314,13 +312,21 @@ class KeyCatcher(wx.Dialog):
 
         self._key = ((), "NONE")
 
-        self.Bind(wx.EVT_LEFT_DOWN, self._on_key)
-        self.Bind(wx.EVT_MIDDLE_DOWN, self._on_key)
-        self.Bind(wx.EVT_RIGHT_DOWN, self._on_key)
-        self.Bind(wx.EVT_KEY_DOWN, self._on_key)
-        self.Bind(wx.EVT_MOUSEWHEEL, self._on_key)
-        self.Bind(wx.EVT_MOUSE_AUX1_DOWN, self._on_key)
-        self.Bind(wx.EVT_MOUSE_AUX2_DOWN, self._on_key)
+        panel = wx.Panel(self)
+        panel.SetFocus()
+
+        panel.Bind(wx.EVT_LEFT_DOWN, self._on_key)
+        panel.Bind(wx.EVT_MIDDLE_DOWN, self._on_key)
+        panel.Bind(wx.EVT_RIGHT_DOWN, self._on_key)
+        panel.Bind(wx.EVT_KEY_DOWN, self._on_key)
+        panel.Bind(wx.EVT_MOUSEWHEEL, self._on_key)
+        panel.Bind(wx.EVT_MOUSE_AUX1_DOWN, self._on_key)
+        panel.Bind(wx.EVT_MOUSE_AUX2_DOWN, self._on_key)
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(panel, 1, wx.EXPAND)
+        self.SetSizer(sizer)
+        self.Layout()
 
     def _on_key(self, evt):
         key = serialise_key_event(evt)
@@ -349,18 +355,31 @@ class KeyConfigDialog(SimpleDialog):
         entries: Sequence[KeyActionType],
         fixed_keybinds: KeybindContainer,
         user_keybinds: KeybindContainer,
+        *,
+        touch_controls_enabled: bool = False,
     ):
         super().__init__(parent, "Key Select")
         self._key_config = KeyConfig(
             self, selected_group, entries, fixed_keybinds, user_keybinds
         )
         self.sizer.Add(self._key_config, 1, wx.EXPAND)
+
+        # Touch controls toggle (placed at the bottom of this dialog)
+        bottom = wx.BoxSizer(wx.HORIZONTAL)
+        self._touch_checkbox = wx.CheckBox(
+            self, label="Enable touchscreen mode (experemental)"
+        )
+        self._touch_checkbox.SetValue(bool(touch_controls_enabled))
+        bottom.Add(self._touch_checkbox, 0, wx.ALL, 50)
+        self.sizer.Add(bottom, 0, wx.EXPAND)
+
         self.Layout()
         self.Fit()
 
     @property
-    def options(self) -> Tuple[KeybindContainer, KeybindGroupIdType, KeybindGroup]:
-        return self._key_config.options
+    def options(self) -> Tuple[KeybindContainer, KeybindGroupIdType, KeybindGroup, bool]:
+        user_keybinds, group_id, keybinds = self._key_config.options
+        return user_keybinds, group_id, keybinds, self._touch_checkbox.GetValue()
 
 
 class KeyConfig(wx.BoxSizer):

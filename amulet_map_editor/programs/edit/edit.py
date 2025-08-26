@@ -1,13 +1,20 @@
-import wx
-from typing import TYPE_CHECKING, Optional, Callable
+from typing import TYPE_CHECKING, Optional, Generator
 import webbrowser
+import logging
+from threading import Thread
+import traceback
+
+import wx
+
+from amulet.api.data_types import OperationYieldType
 
 EDIT_CONFIG_ID = "amulet_edit"
 
-from amulet_map_editor import log, lang
+from amulet_map_editor import lang
 from amulet_map_editor.api.framework.programs import BaseProgram
 from amulet_map_editor.api.datatypes import MenuData
 from amulet_map_editor.api.wx.util.key_config import KeyConfigDialog
+from amulet_map_editor.api.wx.ui.traceback_dialog import TracebackDialog
 from amulet_map_editor.api.wx.ui.simple import SimpleDialog
 from amulet_map_editor.programs.edit.api.canvas.edit_canvas import EditCanvas
 from amulet_map_editor.programs.edit.api.key_config import (
@@ -20,9 +27,23 @@ from amulet_map_editor.api import config
 if TYPE_CHECKING:
     from amulet.api.level import World
 
+log = logging.getLogger(__name__)
+
 
 class EditExtension(wx.Panel, BaseProgram):
-    def __init__(self, parent, world: "World", close_self_callback: Callable[[], None]):
+    # UI elements
+    _sizer: wx.BoxSizer
+    # these only exists on setup. Once setup is finished they will be None
+    _temp_msg: Optional[wx.StaticText]
+    _temp_loading_bar: Optional[wx.Gauge]
+
+    _world: "World"
+    _canvas: Optional[EditCanvas]
+
+    # setup is run in a different thread to avoid blocking the UI
+    _setup_thread: Optional[Thread]
+
+    def __init__(self, parent, world: "World"):
         wx.Panel.__init__(self, parent)
         self._sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetBackgroundColour(
@@ -30,14 +51,14 @@ class EditExtension(wx.Panel, BaseProgram):
         )
         self.SetSizer(self._sizer)
         self._world = world
-        self._canvas: Optional[EditCanvas] = None
-        self._close_self_callback = close_self_callback
+        self._canvas = None
+        self._setup_thread = None
 
         self._sizer.AddStretchSpacer(1)
         self._temp_msg = wx.StaticText(
             self, label=lang.get("program_3d_edit.canvas.please_wait")
         )
-        self._temp_msg.SetFont(wx.Font(40, wx.DECORATIVE, wx.NORMAL, wx.NORMAL))
+        self._temp_msg.SetFont(wx.Font(40, wx.DEFAULT, wx.NORMAL, wx.NORMAL))
         self._sizer.Add(self._temp_msg, 0, flag=wx.ALIGN_CENTER_HORIZONTAL)
         self._temp_loading_bar = wx.Gauge(self, range=10000)
         self._sizer.Add(self._temp_loading_bar, 0, flag=wx.EXPAND)
@@ -45,23 +66,57 @@ class EditExtension(wx.Panel, BaseProgram):
 
     def enable(self):
         if self._canvas is None:
-            self.Update()
+            self._canvas = EditCanvas(self, self._world)
+            self._canvas.Hide()
+            self._setup_thread = Thread(target=self._thread_setup)
+            self._setup_thread.start()
+        else:
+            self._canvas.enable()
 
-            self._canvas = EditCanvas(self, self._world, self._close_self_callback)
-            for arg in self._canvas.setup():
-                if isinstance(arg, (int, float)):
-                    self._temp_loading_bar.SetValue(int(min(arg, 1) * 10000))
-                elif (
-                    isinstance(arg, tuple)
-                    and isinstance(arg[0], (int, float))
-                    and isinstance(arg[1], str)
-                ):
-                    self._temp_loading_bar.SetValue(int(min(arg[0], 1) * 10000))
-                    self._temp_msg.SetLabel(arg[1])
-                self.Layout()
-                self.Update()
-                wx.Yield()
+    def _update_loading(self, it: Generator[OperationYieldType, None, None]):
+        for arg in it:
+            if isinstance(arg, (int, float)):
+                self._temp_loading_bar.SetValue(int(min(arg, 1) * 10000))
+            elif (
+                isinstance(arg, tuple)
+                and isinstance(arg[0], (int, float))
+                and isinstance(arg[1], str)
+            ):
+                self._temp_loading_bar.SetValue(int(min(arg[0], 1) * 10000))
+                self._temp_msg.SetLabel(arg[1])
+            self.Layout()
 
+    def _display_error(self, msg, tb):
+        dialog = TracebackDialog(
+            self,
+            "Exception while setting up canvas",
+            msg,
+            tb,
+        )
+        dialog.ShowModal()
+        dialog.Destroy()
+        self.Destroy()
+
+    def _thread_setup(self):
+        """
+        Setup and enable all the UI elements.
+        This can take a while to run so should be done in a new thread.
+        Everything in here must be thread safe.
+        """
+        try:
+            self._update_loading(self._canvas.thread_setup())
+        except Exception as e:
+            wx.CallAfter(self._display_error, str(e), traceback.format_exc())
+            raise e
+        else:
+            wx.CallAfter(self._post_thread_setup)
+
+    def _post_thread_setup(self):
+        """
+        Run any setup that is not thread safe.
+        """
+        try:
+            self._update_loading(self._canvas.post_thread_setup())
             edit_config: dict = config.get(EDIT_CONFIG_ID, {})
             self._canvas.camera.perspective_fov = edit_config.get("options", {}).get(
                 "fov", 70.0
@@ -75,13 +130,23 @@ class EditExtension(wx.Panel, BaseProgram):
                 "camera_sensitivity", 2.0
             )
 
+            self._temp_msg = None
+            self._temp_loading_bar = None
             self._sizer.Clear(True)
             self._sizer.Add(self._canvas, 1, wx.EXPAND)
             self._canvas.Show()
-
+            self._canvas._set_size()
             self.Layout()
-        self._canvas.Update()
-        self._canvas.enable()
+            wx.CallAfter(
+                self._canvas.enable
+            )  # This must be called after the show handler is run
+            self._setup_thread = None
+        except Exception as e:
+            wx.CallAfter(self._display_error, str(e), traceback.format_exc())
+            raise e
+
+    def can_disable(self) -> bool:
+        return self._setup_thread is None
 
     def disable(self):
         if self._canvas is not None:
@@ -92,17 +157,18 @@ class EditExtension(wx.Panel, BaseProgram):
         if self._canvas is not None:
             self._canvas.close()
 
-    def is_closeable(self) -> bool:
+    def can_close(self) -> bool:
         """
         Check if it is safe to close the UI.
         :return: True if the program can be closed, False otherwise
         """
-        if self._canvas is None:
-            # if the edit program has never been opened then it can be closed
+        if self._setup_thread is not None:
+            return False
+        elif self._canvas is None:
             return True
+        elif self._canvas.is_closeable():
+            return self._check_close_world()
         else:
-            if self._canvas.is_closeable():
-                return self._check_close_world()
             log.info(
                 f"The canvas in edit for world {self._world.level_wrapper.level_name} was not closeable for some reason."
             )
@@ -203,16 +269,29 @@ class EditExtension(wx.Panel, BaseProgram):
         edit_config = config.get(EDIT_CONFIG_ID, {})
         keybind_id = edit_config.get("keybind_group", DefaultKeybindGroupId)
         user_keybinds = edit_config.get("user_keybinds", {})
+        touch_enabled = bool(edit_config.get("options", {}).get("touch_controls", False))
         key_config = KeyConfigDialog(
-            self, keybind_id, KeybindKeys, PresetKeybinds, user_keybinds
+            self, keybind_id, KeybindKeys, PresetKeybinds, user_keybinds,
+            touch_controls_enabled=touch_enabled,
         )
         if key_config.ShowModal() == wx.ID_OK:
-            user_keybinds, keybind_id, keybinds = key_config.options
+            user_keybinds, keybind_id, keybinds, touch_controls_enabled = key_config.options
             edit_config["user_keybinds"] = user_keybinds
             edit_config["keybind_group"] = keybind_id
+            edit_config.setdefault("options", {})
+            edit_config["options"]["touch_controls"] = bool(touch_controls_enabled)
             config.put(EDIT_CONFIG_ID, edit_config)
             self._canvas.buttons.clear_registered_actions()
             self._canvas.buttons.register_actions(keybinds)
+            if hasattr(self._canvas, "set_touchscreen_mode"):
+                # Global touchscreen mode controls toolbar visibility and enables on-screen buttons feature
+                self._canvas.set_touchscreen_mode(bool(touch_controls_enabled))
+            if hasattr(self._canvas, "set_touch_controls_enabled"):
+                # Preserve the user's previous per-session visibility when enabling mode; default to mode state
+                self._canvas.set_touch_controls_enabled(bool(touch_controls_enabled))
+            # Update the toggle states in the top toolbar (FilePanel)
+            if hasattr(self._canvas, '_file_panel'):
+                self._canvas._file_panel.update_touch_toggles()
 
     def _edit_options(self):
         if self._canvas is not None:
@@ -230,7 +309,7 @@ class EditExtension(wx.Panel, BaseProgram):
 
             fov_ui.Bind(wx.EVT_SPINCTRLDOUBLE, set_fov)
             sizer.Add(
-                wx.StaticText(dialog, label="Field of View"),
+                wx.StaticText(dialog, label=lang.get("program_3d_edit.options.field_of_view")),
                 flag=wx.LEFT | wx.TOP | wx.ALIGN_CENTER_VERTICAL | wx.EXPAND,
                 border=5,
             )
@@ -241,7 +320,7 @@ class EditExtension(wx.Panel, BaseProgram):
             )
 
             render_distance_ui = wx.SpinCtrl(
-                dialog, min=0, max=50, initial=render_distance
+                dialog, min=0, max=500, initial=render_distance
             )
 
             def set_render_distance(evt):
@@ -249,7 +328,7 @@ class EditExtension(wx.Panel, BaseProgram):
 
             render_distance_ui.Bind(wx.EVT_SPINCTRL, set_render_distance)
             sizer.Add(
-                wx.StaticText(dialog, label="Render Distance"),
+                wx.StaticText(dialog, label=lang.get("program_3d_edit.options.render_distance")),
                 flag=wx.LEFT | wx.TOP | wx.ALIGN_CENTER_VERTICAL | wx.EXPAND,
                 border=5,
             )
@@ -260,7 +339,7 @@ class EditExtension(wx.Panel, BaseProgram):
             )
 
             camera_sensitivity_ui = wx.SpinCtrlDouble(
-                dialog, min=0, max=10, initial=camera_sensitivity
+                dialog, min=0.1, max=10, initial=camera_sensitivity, inc=0.1
             )
 
             def set_camera_sensitivity(evt):
@@ -268,7 +347,7 @@ class EditExtension(wx.Panel, BaseProgram):
 
             camera_sensitivity_ui.Bind(wx.EVT_SPINCTRLDOUBLE, set_camera_sensitivity)
             sizer.Add(
-                wx.StaticText(dialog, label="Camera Sensitivity"),
+                wx.StaticText(dialog, label=lang.get("program_3d_edit.options.camera_sensitivity")),
                 flag=wx.LEFT | wx.TOP | wx.ALIGN_CENTER_VERTICAL | wx.EXPAND,
                 border=5,
             )
