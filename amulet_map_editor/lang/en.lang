@@ -108,6 +108,13 @@ update_check.ok=Ok
 # Select world
 ## The window when selecting a world to open
 select_world.title=World Select
+select_world.add_custom_section=Add custom section
+select_world.remove_custom_section=Remove this section
+select_world.enter_section_name=Enter the name of the new section
+select_world.new_custom_section=New custom section
+select_world.select_minecraft_folder=Select Minecraft worlds folder
+select_world.confirm_remove_section=Remove custom section '{group_name}'?
+select_world.confirm_removal=Confirm removal
 select_world.open_world_warning=Close the world in game and other tools before opening in Amulet.
 select_world.open_world_button=Open other world
 select_world.open_world_dialogue=Select a Minecraft world directory
@@ -248,7 +255,7 @@ program_3d_edit.chunk_tool.create_chunks_tooltip=Create all chunks in the select
 program_3d_edit.chunk_tool.delete_chunks=Delete Chunks
 program_3d_edit.chunk_tool.delete_chunks_tooltip=Delete the selected chunks. This will delete the actual chunk and all the data contained within it. Next time you load the area in game it will recreate the chunks.
 program_3d_edit.chunk_tool.prune_chunks=Delete Unselected Chunks
-program_3d_edit.chunk_tool.prune_chunks_tooltip=Delete all chunks that are not selected. This will delete the actual chunk and all the data contained within it. Next time you load the area in game it will recreate the chunks.
+program_3d_edit.chunk_tool.prune_chunks_tooltip=Delete chunks that are outside the selection area.
 
 ## Goto/Teleport window
 program_3d_edit.goto_ui.title=Teleport
@@ -273,3 +280,14 @@ program_3d_edit.file_ui.undo_tooltip=Undo
 program_3d_edit.file_ui.redo_tooltip=Redo
 program_3d_edit.file_ui.save_tooltip=Save changes
 program_3d_edit.file_ui.close_tooltip=Close world
+
+# Touch Controls
+program_3d_edit.touch_controls.toggle_label=Touch Controls
+program_3d_edit.touch_controls.toggle_tooltip=Show/hide on-screen movement buttons
+program_3d_edit.mouse_mode.toggle_label=Selector / Camera
+program_3d_edit.mouse_mode.toggle_tooltip=Toggle between selection mode and camera rotation mode
+
+# Options
+program_3d_edit.options.field_of_view=Field of View
+program_3d_edit.options.render_distance=Render Distance
+program_3d_edit.options.camera_sensitivity=Camera Sensitivity
