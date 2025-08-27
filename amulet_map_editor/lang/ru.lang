@@ -111,13 +111,6 @@ select_world.open_world_warning=Закройте мир в игре и друг�
 select_world.recent_worlds=Недавно открытые миры
 select_world.select_directory_failed=Не удалось открыть папку!
 select_world.title=Выбор мира
-select_world.add_custom_section=Добавить пользовательский раздел
-select_world.remove_custom_section=Удалить этот раздел
-select_world.enter_section_name=Введите имя нового раздела
-select_world.new_custom_section=Новый пользовательский раздел
-select_world.select_minecraft_folder=Выберите папку с мирами Minecraft
-select_world.confirm_remove_section=Удалить пользовательский раздел '{group_name}'?
-select_world.confirm_removal=Подтверждение удаления
 
 # Дополнительно
 ## Программа по умолчанию при открытии мира
@@ -293,3 +286,4 @@ program_3d_edit.touch_controls.toggle_label=Сенсорное управлен�
 program_3d_edit.touch_controls.toggle_tooltip=показать/скрыть сенсорные кнопки для перемещения камеры
 program_3d_edit.mouse_mode.toggle_label=Selector / Camera
 program_3d_edit.mouse_mode.toggle_tooltip=Переключатель между режимом выделения областей и вращением направления взгляда камеры
+
