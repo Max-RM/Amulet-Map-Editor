@@ -261,16 +261,20 @@ class EditCanvas(BaseEditCanvas):
         else:
             return DefaultKeys
 
-    def set_touch_controls_enabled(self, enabled: bool):
+    @property
+    def touch_controls_enabled(self) -> bool:
+        return self._touch_controls_enabled
+
+    @touch_controls_enabled.setter
+    def touch_controls_enabled(self, enabled: bool) -> None:
         """Show or hide on-screen movement buttons.
         Does not affect visibility of toolbar controls; that is controlled by touchscreen mode.
         """
         self._touch_controls_enabled = bool(enabled)
 
         # Show/hide touch buttons (only if touchscreen mode is enabled)
-        if hasattr(self, "_touch_buttons"):
-            for btn in self._touch_buttons.values():
-                btn.Show(self._touchscreen_mode and self._touch_controls_enabled)
+        for btn in self._touch_buttons.values():
+            btn.Show(self._touchscreen_mode and self._touch_controls_enabled)
 
         # When touch controls are enabled, default to selection mode (mouse mode enabled)
         # When touch controls are disabled, default to camera rotation mode (mouse mode disabled)
@@ -281,7 +285,7 @@ class EditCanvas(BaseEditCanvas):
             self._mouse_selection_mode = not self._touch_controls_enabled
             self._mouse_selection_mode_initialized = True
             # Apply the initial mouse mode setting
-            self.set_mouse_selection_mode(self._mouse_selection_mode)
+            self.mouse_selection_mode = self._mouse_selection_mode
 
         # Ensure touch controls are positioned correctly and on top
         if enabled and self._touchscreen_mode:
@@ -293,7 +297,16 @@ class EditCanvas(BaseEditCanvas):
         if hasattr(self, "_file_panel"):
             self._file_panel.update_touch_toggles()
 
-    def set_touchscreen_mode(self, enabled: bool):
+    # Backwards-compatible method for existing callers
+    def set_touch_controls_enabled(self, enabled: bool):
+        self.touch_controls_enabled = enabled
+
+    @property
+    def touchscreen_mode(self) -> bool:
+        return self._touchscreen_mode
+
+    @touchscreen_mode.setter
+    def touchscreen_mode(self, enabled: bool) -> None:
         """Enable/disable touchscreen mode (global).
         Controls whether the toolbar Touch Controls/Selector button is visible and
         whether on-screen movement buttons can be shown at all.
@@ -303,31 +316,40 @@ class EditCanvas(BaseEditCanvas):
         if not self._touchscreen_mode:
             self._touch_controls_enabled = False
         # Apply visibility to on-screen buttons
-        if hasattr(self, "_touch_buttons"):
-            for btn in self._touch_buttons.values():
-                btn.Show(self._touchscreen_mode and self._touch_controls_enabled)
+        for btn in self._touch_buttons.values():
+            btn.Show(self._touchscreen_mode and self._touch_controls_enabled)
         # Update toolbar controls visibility/state
-        if hasattr(self, "_file_panel"):
-            self._file_panel.update_touch_toggles()
+        self._file_panel.update_touch_toggles()
         self.Layout()
 
-    def set_mouse_selection_mode(self, selection_mode: bool):
+    # Backwards-compatible method for existing callers
+    def set_touchscreen_mode(self, enabled: bool):
+        self.touchscreen_mode = enabled
+
+    @property
+    def mouse_selection_mode(self) -> bool:
+        return self._mouse_selection_mode
+
+    @mouse_selection_mode.setter
+    def mouse_selection_mode(self, selection_mode: bool) -> None:
         """Set mouse mode: True for selection mode, False for camera rotation mode."""
         self._mouse_selection_mode = bool(selection_mode)
         # Update camera behavior based on mode
-        if hasattr(self, "camera") and hasattr(self.camera, "rotating"):
-            if not selection_mode:
-                # Camera rotation mode - enable mouse rotation
-                self.camera.rotating = True
-                self.SetCursor(wx.Cursor(wx.CURSOR_BLANK))
-            else:
-                # Selection mode - disable mouse rotation
-                self.camera.rotating = False
-                self.SetCursor(wx.NullCursor)
+        if not selection_mode:
+            # Camera rotation mode - enable mouse rotation
+            self.camera.rotating = True
+            self.SetCursor(wx.Cursor(wx.CURSOR_BLANK))
+        else:
+            # Selection mode - disable mouse rotation
+            self.camera.rotating = False
+            self.SetCursor(wx.NullCursor)
 
         # Update the toggle in the top toolbar (FilePanel)
-        if hasattr(self, "_file_panel"):
-            self._file_panel.update_touch_toggles()
+        self._file_panel.update_touch_toggles()
+
+    # Backwards-compatible method for existing callers
+    def set_mouse_selection_mode(self, selection_mode: bool):
+        self.mouse_selection_mode = selection_mode
 
     def _build_touch_overlay(self):
         try:
