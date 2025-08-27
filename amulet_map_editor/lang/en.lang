@@ -248,7 +248,7 @@ program_3d_edit.chunk_tool.create_chunks_tooltip=Create all chunks in the select
 program_3d_edit.chunk_tool.delete_chunks=Delete Chunks
 program_3d_edit.chunk_tool.delete_chunks_tooltip=Delete the selected chunks. This will delete the actual chunk and all the data contained within it. Next time you load the area in game it will recreate the chunks.
 program_3d_edit.chunk_tool.prune_chunks=Delete Unselected Chunks
-program_3d_edit.chunk_tool.prune_chunks_tooltip=Delete chunks that are outside the selection area.
+program_3d_edit.chunk_tool.prune_chunks_tooltip=Delete all chunks that are not selected. This will delete the actual chunk and all the data contained within it. Next time you load the area in game it will recreate the chunks.
 
 ## Goto/Teleport window
 program_3d_edit.goto_ui.title=Teleport
