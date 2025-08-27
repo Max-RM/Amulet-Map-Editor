@@ -108,13 +108,6 @@ update_check.ok=Ok
 # Select world
 ## The window when selecting a world to open
 select_world.title=World Select
-select_world.add_custom_section=Add custom section
-select_world.remove_custom_section=Remove this section
-select_world.enter_section_name=Enter the name of the new section
-select_world.new_custom_section=New custom section
-select_world.select_minecraft_folder=Select Minecraft worlds folder
-select_world.confirm_remove_section=Remove custom section '{group_name}'?
-select_world.confirm_removal=Confirm removal
 select_world.open_world_warning=Close the world in game and other tools before opening in Amulet.
 select_world.open_world_button=Open other world
 select_world.open_world_dialogue=Select a Minecraft world directory
