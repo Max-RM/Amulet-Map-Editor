@@ -246,12 +246,6 @@ program_3d_edit.chunk_tool.min_y_tooltip=Минимальная координа
 program_3d_edit.chunk_tool.prune_chunks=Удалить не выбранные чанки
 program_3d_edit.chunk_tool.prune_chunks_tooltip=Удалить чанки, которые находятся вне области выделения.
 
-# Сенсорное управление
-program_3d_edit.touch_controls.toggle_label=Сенсорное управление
-program_3d_edit.touch_controls.toggle_tooltip=Показать/скрыть кнопки управления на экране
-program_3d_edit.mouse_mode.toggle_label=Режим мыши
-program_3d_edit.mouse_mode.toggle_tooltip=Переключение между режимом выделения и поворотом камеры
-
 # Настройки
 program_3d_edit.options.field_of_view=Поле зрения
 program_3d_edit.options.render_distance=Дистанция рендера
@@ -281,9 +275,9 @@ program_3d_edit.file_ui.speed_tooltip=Скорость камеры в блок�
 program_3d_edit.file_ui.undo_tooltip=Отменить
 program_3d_edit.file_ui.version_tooltip=Платформа и версия данных
 
-# Сенсорный режим
+# Сенсорное управление
 program_3d_edit.touch_controls.toggle_label=Сенсорное управление
-program_3d_edit.touch_controls.toggle_tooltip=показать/скрыть сенсорные кнопки для перемещения камеры
-program_3d_edit.mouse_mode.toggle_label=Selector / Camera
-program_3d_edit.mouse_mode.toggle_tooltip=Переключатель между режимом выделения областей и вращением направления взгляда камеры
+program_3d_edit.touch_controls.toggle_tooltip=Показать/скрыть сенсорные кнопки управления на экране
+program_3d_edit.mouse_mode.toggle_label=Выделитель/Камера
+program_3d_edit.mouse_mode.toggle_tooltip=Переключение между режимом выделения областей и поворотом направления взгляда камеры
 
