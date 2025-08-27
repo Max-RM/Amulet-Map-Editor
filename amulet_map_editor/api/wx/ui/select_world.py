@@ -5,7 +5,6 @@ from sys import platform
 from typing import List, Dict, Tuple, Callable, TYPE_CHECKING
 import traceback
 import logging
-from functools import partial
 
 from amulet import load_format
 from amulet.api.errors import FormatError
@@ -14,7 +13,6 @@ from amulet_map_editor import lang, CONFIG
 from amulet_map_editor.api.wx.ui import simple
 from amulet_map_editor.api.wx.util.ui_preferences import preserve_ui_preferences
 from amulet_map_editor.api.framework import app
-from wx.lib.scrolledpanel import ScrolledPanel
 
 
 if TYPE_CHECKING:
@@ -198,82 +196,7 @@ class CollapsibleWorldListUI(wx.CollapsiblePane):
 
     def eval_layout(self, evt):
         self.Layout()
-        # Climb to the scrolled container to update scrollbars and layout
-        container = self
-        while container is not None and not isinstance(container, ScrolledPanel):
-            container = container.GetParent()
-        if isinstance(container, ScrolledPanel):
-            container.Layout()
-            try:
-                container.SetupScrolling()
-            except Exception:
-                pass
-            container.FitInside()
-        evt.Skip()
-
-
-class CustomWorldGroupUI(wx.Panel):
-    """Custom group with a header row (label + remove button) and collapsible content."""
-
-    def __init__(
-        self,
-        parent: wx.Window,
-        group_name: str,
-        directory: str,
-        open_world_callback,
-        on_remove: Callable[[str], None],
-    ):
-        super().__init__(parent)
-        self._group_name = group_name
-        self._directory = directory
-        self._on_remove = on_remove
-        self.parent = parent
-
-        self.sizer = wx.BoxSizer(wx.VERTICAL)
-        self.SetSizer(self.sizer)
-
-        # Header row with collapsible pane and remove button
-        header = wx.Panel(self)
-        header_sizer = wx.BoxSizer(wx.HORIZONTAL)
-        header.SetSizer(header_sizer)
-
-        # Create the collapsible pane with limited width
-        self._collapsible = wx.CollapsiblePane(header, label=group_name)
-        self._collapsible.Bind(wx.EVT_COLLAPSIBLEPANE_CHANGED, self.eval_layout)
-        header_sizer.Add(self._collapsible, 0, wx.EXPAND)
-
-        # Add remove button next to the collapsible pane
-        remove_btn = wx.Button(header, label="-")
-        remove_btn.SetToolTip(wx.ToolTip(lang.get("select_world.remove_custom_section")))
-        remove_btn.Bind(wx.EVT_BUTTON, lambda _evt: self._on_remove(group_name))
-        header_sizer.Add(remove_btn, 0, wx.LEFT | wx.ALIGN_TOP, 5)
-
-        # Add stretch spacer to push everything to the left
-        header_sizer.AddStretchSpacer()
-
-        self.sizer.Add(header, 0, wx.EXPAND)
-
-        # Content panel
-        panel = self._collapsible.GetPane()
-        panel.sizer = wx.BoxSizer(wx.VERTICAL)
-        panel.SetSizer(panel.sizer)
-        world_paths = glob.glob(os.path.join(glob.escape(directory), "*"))
-        world_list = WorldList(panel, world_paths, open_world_callback)
-        panel.sizer.Add(world_list, 0, wx.EXPAND)
-
-    def eval_layout(self, evt):
-        self.Layout()
-        # Climb to the scrolled container to update scrollbars and layout
-        container = self
-        while container is not None and not isinstance(container, ScrolledPanel):
-            container = container.GetParent()
-        if isinstance(container, ScrolledPanel):
-            container.Layout()
-            try:
-                container.SetupScrolling()
-            except Exception:
-                pass
-            container.FitInside()
+        self.parent.FitInside()
         evt.Skip()
 
 
@@ -284,31 +207,14 @@ class ScrollableWorldsUI(simple.SimpleScrollablePanel):
         self.open_world_callback = open_world_callback
 
         self.dirs: Dict[str, CollapsibleWorldListUI] = {}
-        self._custom_paths_config_id = "custom_world_paths"
         self.reload()
 
         self.Layout()
-
-    def _load_custom_paths(self) -> Dict[str, str]:
-        cfg = CONFIG.get(self._custom_paths_config_id, {})
-        # Expecting mapping of name -> path
-        if isinstance(cfg, dict):
-            # Filter only valid, normalize paths
-            return {
-                str(name): str(path)
-                for name, path in cfg.items()
-                if isinstance(name, str) and isinstance(path, str)
-            }
-        return {}
-
-    def _save_custom_paths(self, mapping: Dict[str, str]):
-        CONFIG.put(self._custom_paths_config_id, mapping)
 
     def reload(self):
         for val in self.dirs.values():
             val.Destroy()
         self.dirs.clear()
-        # Default groups
         for group_name, directory in minecraft_world_paths.items():
             if os.path.isdir(directory):
                 world_list = CollapsibleWorldListUI(
@@ -320,49 +226,8 @@ class ScrollableWorldsUI(simple.SimpleScrollablePanel):
                 self.add_object(world_list, 0, wx.EXPAND)
                 self.dirs[directory] = world_list
 
-        # Custom groups from config
-        custom_paths = self._load_custom_paths()
-        for custom_name, custom_directory in custom_paths.items():
-            if not os.path.isdir(custom_directory):
-                continue
-            custom_group = CustomWorldGroupUI(
-                self,
-                custom_name,
-                custom_directory,
-                self.open_world_callback,
-                on_remove=lambda name=custom_name: self._confirm_remove_custom_group(
-                    name, None
-                ),
-            )
-            self.add_object(custom_group, 0, wx.EXPAND)
-            self.dirs[custom_directory] = custom_group
-
-        # Refresh scrolling and layout
-        self.Layout()
-        try:
-            self.SetupScrolling()
-        except Exception:
-            pass
-        self.FitInside()
-
     def OnChildFocus(self, event):
         event.Skip()
-
-    def _confirm_remove_custom_group(self, group_name: str, _evt):
-        dlg = wx.MessageDialog(
-            self,
-            lang.get("select_world.confirm_remove_section").format(group_name=group_name),
-            lang.get("select_world.confirm_removal"),
-            style=wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING,
-        )
-        res = dlg.ShowModal()
-        dlg.Destroy()
-        if res == wx.ID_YES:
-            custom_paths = self._load_custom_paths()
-            if group_name in custom_paths:
-                del custom_paths[group_name]
-                self._save_custom_paths(custom_paths)
-                self.reload()
 
 
 class WorldSelectUI(wx.Panel):
@@ -376,22 +241,14 @@ class WorldSelectUI(wx.Panel):
         sizer = wx.BoxSizer(wx.VERTICAL)
         self.SetSizer(sizer)
 
-        header = wx.BoxSizer(wx.HORIZONTAL)
-        sizer.Add(header, 0, wx.EXPAND)
-
         self.header_open_world = wx.Button(
             self, label=lang.get("select_world.open_world_button")
         )
         self.header_open_world.Bind(wx.EVT_BUTTON, self._open_world)
-        header.Add(self.header_open_world, 0)
+        sizer.Add(self.header_open_world)
 
-        self.add_path_button = wx.Button(self, label="+")
-        self.add_path_button.SetToolTip(wx.ToolTip(lang.get("select_world.add_custom_section")))
-        self.add_path_button.Bind(wx.EVT_BUTTON, self._add_custom_path)
-        header.Add(self.add_path_button, 0, wx.LEFT, 5)
-
-        self.content = ScrollableWorldsUI(self, open_world_callback)
-        sizer.Add(self.content, 1, wx.EXPAND)
+        content = ScrollableWorldsUI(self, open_world_callback)
+        sizer.Add(content, 1, wx.EXPAND)
 
     def _open_world(self, evt):
         dir_dialog = wx.DirDialog(
@@ -410,49 +267,6 @@ class WorldSelectUI(wx.Panel):
         finally:
             dir_dialog.Destroy()
         self.open_world_callback(path)
-
-    def _add_custom_path(self, _evt):
-        # Ask for a group name
-        name_dialog = wx.TextEntryDialog(
-            self,
-            lang.get("select_world.enter_section_name"),
-            lang.get("select_world.new_custom_section"),
-        )
-        try:
-            if name_dialog.ShowModal() != wx.ID_OK:
-                return
-            group_name = name_dialog.GetValue().strip()
-            if not group_name:
-                return
-        finally:
-            name_dialog.Destroy()
-
-        # Ask for a directory
-        dir_dialog = wx.DirDialog(
-            self,
-            lang.get("select_world.select_minecraft_folder"),
-            style=wx.DD_DEFAULT_STYLE | wx.DD_DIR_MUST_EXIST,
-        )
-        try:
-            if dir_dialog.ShowModal() != wx.ID_OK:
-                return
-            directory = dir_dialog.GetPath()
-        finally:
-            dir_dialog.Destroy()
-
-        if not os.path.isdir(directory):
-            return
-
-        # Save to config
-        cfg_id = "custom_world_paths"
-        custom_paths = CONFIG.get(cfg_id, {})
-        if not isinstance(custom_paths, dict):
-            custom_paths = {}
-        custom_paths[group_name] = directory
-        CONFIG.put(cfg_id, custom_paths)
-
-        # Reload list
-        self.content.reload()
 
 
 class RecentWorldUI(wx.Panel):
